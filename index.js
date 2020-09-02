@@ -19,7 +19,9 @@ app.use(session({
     secret: "yanan",
     cookie: {
         maxAge: 60000
-    }
+    },
+    resave: true,
+    saveUninitialized: false
 }));
 
 app.get("/", (req, res, next) => {
@@ -27,6 +29,7 @@ app.get("/", (req, res, next) => {
     if (!req.session.auth) return res.redirect(403, "/login") && next();
     res.render("pages/index", {
         data: {
+            title: "Welcome!",
             heading: `Welcome ${req.session.authas.user}`
         }
     });
@@ -38,6 +41,7 @@ app.get("/login", (req, res, next) => {
     if (!req.session) return res.render('pages/index', {data: {world: "! Some bad programming happened"}}) && next();
     if (req.session.auth) return res.redirect(200, "/") && next();
     res.render("pages/login", {data: {
+        title: "Login",
         header: "Please login"
     }})
     return next();
@@ -49,6 +53,7 @@ app.post("/login", (req, res) => {
     con.query(`SELECT * FROM users WHERE ?? = ?`, ["name", req.body.username], (err, rows) => {
         if (rows.length <= 0) return res.render("pages/login", {
             data: {
+                title: "Login",
                 error: {
                     message: "Invalid username or password!"
                 }
@@ -62,6 +67,7 @@ app.post("/login", (req, res) => {
             res.redirect(200, "/")
         } else {
             res.render("pages/login", {data: {
+                title: "Login",
                 error: {
                     message: "Invalid username or password!"
                 }
@@ -75,6 +81,7 @@ app.get("/register", (req, res, next) => {
     if (!req.session) return res.render('pages/index', {data: {world: "! Some bad programming happened"}}) && next();
     if (req.session.auth) return res.redirect(200, "/") && next();
     res.render("pages/register", {data: {
+        title: "Register",
         header: "Please enter the password"
     }})
     return next();

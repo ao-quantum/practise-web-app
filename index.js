@@ -1,15 +1,37 @@
 const express = require('express');
 const session = require('express-session');
 const bcrypt = require('bcrypt');
-const mysql = require('mysql');
-
-const con = mysql.createConnection({
-    host: "localhost",
-    port: 3306,
-    user: 'express_test',
-    password: "express_test",
-    database: 'express_test'
+const sequelize = require('sequelize');
+const db = new sequelize.Sequelize('express_test', 'express_test', 'express_test', {
+    dialect: 'mysql',
+    host: 'localhost'
 });
+
+db.authenticate().then(() => {
+    console.log("Database connected!");
+}).catch(err => {
+    console.error(err);
+})
+
+// Models
+const User = require('./models/User');
+
+User.init({
+    name: {
+        type: sequelize.DataTypes.STRING,
+        allowNull: false
+    },
+    password: {
+        type: sequelize.DataTypes.STRING,
+        allowNull: false
+    }
+}, {
+    sequelize: db,
+    modelName: 'user',
+    tableName: 'users'
+});
+
+db.sync({alter: true})
 
 const app = express();
 
@@ -50,28 +72,39 @@ app.get("/login", (req, res, next) => {
 app.post("/login", (req, res) => {
     if (!req.session) return res.render('pages/index', {data: {world: "! Some bad programming happened"}}) && next();
     if (req.session.auth) return res.redirect(200, "/") && next();
-    con.query(`SELECT * FROM users WHERE ?? = ?`, ["name", req.body.username], (err, rows) => {
-        if (rows.length <= 0) return res.render("pages/login", {
-            data: {
-                title: "Login",
-                error: {
-                    message: "Invalid username or password!"
+    User.findAll({
+        where: {
+            name: req.body.username
+        }
+    }).then(user => {
+        if (user.length <= 0) {
+            return res.render("pages/login", {
+                data: {
+                    title: "Login",
+                    header: "Login",
+                    error: {
+                        message: "Invalid username or password!"
+                    }
                 }
-            }
-        }) && next();
-        if (bcrypt.compareSync(req.body.password, rows[0].password)) {
+            })
+        }
+
+        if (bcrypt.compareSync(req.body.password, user[0].getDataValue("password"))) {
             req.session.auth = true;
             req.session.authas = {
-                user: rows[0].name
+                user: user[0].getDataValue("name")
             }
-            res.redirect(200, "/")
+            res.redirect(200, "/");
         } else {
-            res.render("pages/login", {data: {
-                title: "Login",
-                error: {
-                    message: "Invalid username or password!"
+            res.render("pages/login", {
+                data: {
+                    title: "Login",
+                    header: "Login",
+                    error: {
+                        message: "Invalid username or password!"
+                    }
                 }
-            }});
+            })
         }
     })
 })
@@ -82,7 +115,7 @@ app.get("/register", (req, res, next) => {
     if (req.session.auth) return res.redirect(200, "/") && next();
     res.render("pages/register", {data: {
         title: "Register",
-        header: "Please enter the password"
+        header: "Please register"
     }})
     return next();
 });
@@ -90,11 +123,34 @@ app.get("/register", (req, res, next) => {
 app.post("/register", (req, res, next) => {
     if (!req.session) return res.render('pages/index', {data: {world: "! Some bad programming happened"}}) && next();
     if (req.session.auth) return res.redirect(200, "/") && next();
-    con.query(`INSERT INTO users (??, ??) VALUES (?, ?)`, ["name", "password", req.body.username, bcrypt.hashSync(req.body.password, 12)], (err, rows) => {
-        if (err) throw err;
-
-        res.redirect(200, "/login")
-        return next();
+    User.findAll({
+        where: {
+            name: req.body.username
+        }
+    }).then(user => {
+        if (user.length > 0) {
+            res.render("pages/register", {
+                data: {
+                    header: "Register",
+                    title: "Reigster",
+                    error: {
+                        message: "Username already taken!"
+                    }
+                }
+            })
+        } else {
+            User.create({
+                name: req.body.username,
+                password: bcrypt.hashSync(req.body.password, 11)
+            }).then(() => {
+                res.render("pages/login", {
+                    data: {
+                        header: "Login",
+                        title: "Login"
+                    }
+                })
+            })
+        }
     })
 });
 
@@ -105,7 +161,7 @@ app.post("/logout", (req, res, next) => {
         delete req.session.authas;
     }
     
-    res.redirect("/login", 200)
+    res.redirect(200, "/login")
 });
 
 app.listen(3000, () => {

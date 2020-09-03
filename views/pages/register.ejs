@@ -6,13 +6,16 @@
 <body>
     <%- include("../partials/header.ejs") %> 
     <form action="/register" method="post">
-        <input type="text" name="username"><br />
-        <input type="text" name="password"><br />
+        Username: <input type="text" name="username"><br />
+        password: <input type="password" name="password"><br />
         <input type="submit" value="Register">
     </form>
     <p><a href="/login">Login</a></p>
     <% if (data.error) { %>
         <%= data.error.message %> 
     <% } %> 
+    <footer>
+        <%- include('../partials/footer.ejs') %> 
+    </footer>
 </body>
 </html>

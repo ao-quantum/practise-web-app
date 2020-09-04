@@ -52,11 +52,12 @@ app.get("/", (req, res, next) => {
     res.render("pages/index", {
         data: {
             title: "Welcome!",
-            heading: `Welcome ${req.session.authas.user}`
+            header: `Welcome ${req.session.authas.user}`
         }
     });
     return next();
 });
+app.use('/static', express.static(process.cwd() + '/static'))
 
 // Login system
 app.get("/login", (req, res, next) => {
